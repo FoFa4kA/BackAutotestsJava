@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<suite name="BackAutotestJava" thread-count="3" parallel="classes">
+    <test name="Test wordpress api">
+        <classes>
+            <class name="wordpressapi.tests.PostsTests"></class>
+            <class name="wordpressapi.tests.UsersTests"></class>
+            <class name="wordpressapi.tests.TagsTests"></class>
+        </classes>
+    </test>
+</suite>
