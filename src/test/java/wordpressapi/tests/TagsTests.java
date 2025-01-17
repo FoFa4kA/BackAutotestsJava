@@ -57,18 +57,23 @@ public class TagsTests {
                         "slug", equalTo(name.toLowerCase()),
                         "taxonomy", equalTo("post_tag"),
                         "meta", empty(),
+                        "_links.self", hasSize(1),
                         "_links.self[0].href", startsWith("http://localhost:8000/index.php?rest_route=/wp/v2/tags/"),
                         "_links.self[0].targetHints.allow[0]", equalTo("GET"),
                         "_links.self[0].targetHints.allow[1]", equalTo("POST"),
                         "_links.self[0].targetHints.allow[2]", equalTo("PUT"),
                         "_links.self[0].targetHints.allow[3]", equalTo("PATCH"),
                         "_links.self[0].targetHints.allow[4]", equalTo("DELETE"),
+                        "_links.collection", hasSize(1),
                         "_links.collection[0].href",
                         equalTo("http://localhost:8000/index.php?rest_route=/wp/v2/tags"),
+                        "_links.about", hasSize(1),
                         "_links.about[0].href",
                         equalTo("http://localhost:8000/index.php?rest_route=/wp/v2/taxonomies/post_tag"),
-//                        "_links.wp:post_type[0].href",
-//                        startsWith("http://localhost:8000/index.php?rest_route=%2Fwp%2Fv2%2Fposts&tags="),
+                        "_links.'wp:post_type'", hasSize(1),
+                        "_links.'wp:post_type'[0].href",
+                        startsWith("http://localhost:8000/index.php?rest_route=%2Fwp%2Fv2%2Fposts&tags="),
+                        "_links.curies", hasSize(1),
                         "_links.curies[0].name", equalTo("wp"),
                         "_links.curies[0].href", equalTo("https://api.w.org/{rel}"),
                         "_links.curies[0].templated", equalTo(true))
@@ -89,14 +94,13 @@ public class TagsTests {
                         "slug", equalTo(name.toLowerCase()),
                         "_links.self[0].href",
                         equalTo("http://localhost:8000/index.php?rest_route=/wp/v2/tags/" + newTagId)
-//                        , "_links.wp:post_type[0].href",
-//                        equalTo("http://localhost:8000/index.php?rest_route=%2Fwp%2Fv2%2Fposts&tags=" +
-//                                newTagId)
-                );
+                        , "_links.'wp:post_type'[0].href",
+                        equalTo("http://localhost:8000/index.php?rest_route=%2Fwp%2Fv2%2Fposts&tags=" +
+                                newTagId));
     }
 
     @Test
-    @Story("Получение поста")
+    @Story("Получение тега")
     @Severity(SeverityLevel.MINOR)
     public void retrieveTagTest() {
         String name = getGeneratedString(10);
@@ -117,9 +121,9 @@ public class TagsTests {
                         "slug", equalTo(name.toLowerCase()),
                         "_links.self[0].href",
                         equalTo("http://localhost:8000/index.php?rest_route=/wp/v2/tags/" + newTagId)
-//                        , "_links.wp:post_type[0].href",
-//                        equalTo("http://localhost:8000/index.php?rest_route=%2Fwp%2Fv2%2Fposts&tags=" +
-//                                newTagId)
+                        , "_links.'wp:post_type'[0].href",
+                        equalTo("http://localhost:8000/index.php?rest_route=%2Fwp%2Fv2%2Fposts&tags=" +
+                                newTagId)
                 );
     }
 

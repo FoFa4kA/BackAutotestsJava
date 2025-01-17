@@ -20,6 +20,7 @@ import java.util.concurrent.TimeUnit;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.emptyString;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.startsWith;
@@ -73,6 +74,7 @@ public class UsersTests {
                         "locale", equalTo("ru_RU"),
                         "nickname", equalTo(username),
                         "slug", equalTo(username.toLowerCase()),
+                        "roles", hasSize(1),
                         "roles[0]", equalTo("subscriber"),
                         "registered_date", startsWith(currentDateGmt),
                         "capabilities.read", equalTo(true),
@@ -83,12 +85,15 @@ public class UsersTests {
                         "avatar_urls.48", startsWith("https://secure.gravatar.com/avatar/"),
                         "avatar_urls.96", startsWith("https://secure.gravatar.com/avatar/"),
                         "meta.persisted_preferences", empty(),
+                        "_links.self", hasSize(1),
                         "_links.self[0].href", startsWith("http://localhost:8000/index.php?rest_route=/wp/v2/users/"),
+                        "_links.self[0].targetHints.allow", hasSize(5),
                         "_links.self[0].targetHints.allow[0]", equalTo("GET"),
                         "_links.self[0].targetHints.allow[1]", equalTo("POST"),
                         "_links.self[0].targetHints.allow[2]", equalTo("PUT"),
                         "_links.self[0].targetHints.allow[3]", equalTo("PATCH"),
                         "_links.self[0].targetHints.allow[4]", equalTo("DELETE"),
+                        "_links.collection", hasSize(1),
                         "_links.collection[0].href",
                         equalTo("http://localhost:8000/index.php?rest_route=/wp/v2/users"))
                 .extract().as(CreateUserResponse.class);
@@ -282,6 +287,7 @@ public class UsersTests {
                         "slug", equalTo(username.toLowerCase()),
                         "_links.self[0].href",
                         equalTo("http://localhost:8000/index.php?rest_route=/wp/v2/users/" + userMeId));
+
 
     }
 
