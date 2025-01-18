@@ -8,4 +8,11 @@
             <class name="wordpressapi.tests.TagsTests"></class>
         </classes>
     </test>
+    <test name="Test Wordpress DB">
+        <classes>
+            <class name="wordpressdb.tests.UsersTests"></class>
+            <class name="wordpressdb.tests.PostsTests"></class>
+            <class name="wordpressdb.tests.TagsTests"></class>
+        </classes>
+    </test>
 </suite>
