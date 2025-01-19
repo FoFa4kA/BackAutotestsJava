@@ -19,7 +19,7 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.startsWith;
 import static wordpressapi.steps.TagsSteps.createTag;
 import static wordpressapi.steps.TagsSteps.deleteTag;
-import static wordpressapi.utils.GenerateString.getGeneratedString;
+import static wordpressapi.utils.GenerateData.getGeneratedString;
 import static wordpressapi.utils.Specs.REQ_SPEC;
 import static wordpressapi.utils.Specs.getBasicAuth;
 import static wordpressapi.utils.TestProps.FORCE;
@@ -128,7 +128,7 @@ public class TagsTests {
     }
 
     @Test
-    @Story("Изменение описания поста")
+    @Story("Изменение описания тега")
     @Severity(SeverityLevel.MINOR)
     public void updateTagDescriptionTest() {
         String name = getGeneratedString(10);
@@ -158,7 +158,7 @@ public class TagsTests {
     }
 
     @Test
-    @Story("Удаление поста")
+    @Story("Удаление тега")
     @Severity(SeverityLevel.MINOR)
     public void deleteTagTest() {
         String name = getGeneratedString(10);
@@ -196,7 +196,7 @@ public class TagsTests {
     }
 
     @Test
-    @Story("Получение списка постов с указанием страницы и кол-ом элементов на одной странице")
+    @Story("Получение списка тегов с указанием страницы и кол-ом элементов на одной странице")
     @Severity(SeverityLevel.MINOR)
     public void getListTagsTest() {
         for (int i = 0; i < 5; i++) {
@@ -217,7 +217,7 @@ public class TagsTests {
     }
 
     @Test
-    @Story("Попытка получения поста по некорректному id")
+    @Story("Попытка получения тега по некорректному id")
     @Severity(SeverityLevel.MINOR)
     public void attemptToGetTagWithInvalidId() {
         String invalidId = getGeneratedString(10);

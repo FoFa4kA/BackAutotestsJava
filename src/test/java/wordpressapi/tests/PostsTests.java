@@ -25,7 +25,7 @@ import static org.hamcrest.Matchers.startsWith;
 import static wordpressapi.steps.PostsSteps.createPost;
 import static wordpressapi.steps.PostsSteps.deletePost;
 import static wordpressapi.utils.DateDeserializer.DATE_TIME_PATTERN;
-import static wordpressapi.utils.GenerateString.getGeneratedString;
+import static wordpressapi.utils.GenerateData.getGeneratedString;
 import static wordpressapi.utils.Specs.REQ_SPEC;
 import static wordpressapi.utils.Specs.getBasicAuth;
 import static wordpressapi.utils.TestProps.FORCE;

@@ -26,7 +26,7 @@ import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.startsWith;
 import static wordpressapi.steps.UsersSteps.createUser;
 import static wordpressapi.steps.UsersSteps.deleteUser;
-import static wordpressapi.utils.GenerateString.getGeneratedString;
+import static wordpressapi.utils.GenerateData.getGeneratedString;
 import static wordpressapi.utils.Specs.REQ_SPEC;
 import static wordpressapi.utils.Specs.getBasicAuth;
 import static wordpressapi.utils.TestProps.FORCE;
