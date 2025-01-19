@@ -20,8 +20,9 @@ import static wordpressdb.steps.TagsSteps.createTag;
 
 @Feature("Tags Tests")
 public class TagsTests extends BaseTest {
-    private final String tagResultSetSql = "select wp_terms.name, tax.description from wp_terms " +
-            "join wp_term_taxonomy tax on wp_terms.term_id = tax.term_id where tax.term_id = '%d'";
+    private final String getTagByIdSql = "SELECT wp_terms.name, tax.description FROM wp_terms " +
+            "JOIN wp_term_taxonomy tax ON wp_terms.term_id = tax.term_id WHERE tax.term_id = %d";
+    private int createdTagId;
 
     @Test
     @Story("Создание тега")
@@ -29,28 +30,28 @@ public class TagsTests extends BaseTest {
     public void createTagTest() throws SQLException {
         String name = getGeneratedString(10);
         String description = getGeneratedString(25);
-        int createdTagNameIdFromDb = 0;
+        String createTagNameSql = String.format("INSERT INTO wp_terms (name) VALUES ('%s')", name);
+        String getCreatedTagByNameSql = String.format("SELECT * FROM wp_terms WHERE name = '%s'", name);
+        String createTagDescriptionSql = "INSERT INTO wp_term_taxonomy (term_id, taxonomy, description) " +
+                "VALUES ('%d', 'post_tag', '%s')";
 
         // create tag name
-        String createTagName = String.format("insert into wp_terms (name) values ('%s')", name);
-        assertEquals(statement.executeUpdate(createTagName), 1);
+        assertEquals(statement.executeUpdate(createTagNameSql), 1);
+
+        // get tag id by name
+        ResultSet tagByNameResultSet = statement.executeQuery(getCreatedTagByNameSql);
+        tagByNameResultSet.next();
+        createdTagId = tagByNameResultSet.getInt("term_id");
 
         // create tag description
-        ResultSet tagNameResultSet = statement.executeQuery(String.format("select * from wp_terms where name = '%s'",
-                name));
-        while (tagNameResultSet.next()) {
-            createdTagNameIdFromDb = tagNameResultSet.getInt("term_id");
-        }
-        String createTagDescription = String.format("insert into wp_term_taxonomy (term_id, taxonomy, description) " +
-                "values ('%d', 'post_tag', '%s')", createdTagNameIdFromDb, description);
-        assertEquals(statement.executeUpdate(createTagDescription), 1);
+        assertEquals(statement.executeUpdate(String.format(createTagDescriptionSql, createdTagId, description)),
+                1);
 
-        // check created tag with description
-        ResultSet createdTagResultSet = statement.executeQuery(String.format(tagResultSetSql, createdTagNameIdFromDb));
-        while (createdTagResultSet.next()) {
-            assertEquals(createdTagResultSet.getString("name"), name);
-            assertEquals(createdTagResultSet.getString("description"), description);
-        }
+        // check created tag by id
+        ResultSet createdTagResultSet = statement.executeQuery(String.format(getTagByIdSql, createdTagId));
+        createdTagResultSet.next();
+        assertEquals(createdTagResultSet.getString("name"), name);
+        assertEquals(createdTagResultSet.getString("description"), description);
     }
 
     @Test
@@ -59,15 +60,13 @@ public class TagsTests extends BaseTest {
     public void retrieveTagTest() throws SQLException {
         String name = getGeneratedString(10);
         String description = getGeneratedString(25);
-        int createdTagNameIdFromDb;
 
-        createdTagNameIdFromDb = createTag(name, description);
+        createdTagId = createTag(name, description);
 
-        ResultSet resultSet = statement.executeQuery(String.format(tagResultSetSql, createdTagNameIdFromDb));
-        while (resultSet.next()) {
-            assertEquals(resultSet.getString("name"), name);
-            assertEquals(resultSet.getString("description"), description);
-        }
+        ResultSet createdTagResultSet = statement.executeQuery(String.format(getTagByIdSql, createdTagId));
+        createdTagResultSet.next();
+        assertEquals(createdTagResultSet.getString("name"), name);
+        assertEquals(createdTagResultSet.getString("description"), description);
     }
 
     @Test
@@ -76,19 +75,17 @@ public class TagsTests extends BaseTest {
     public void updateTagDescriptionTest() throws SQLException {
         String name = getGeneratedString(10);
         String description = getGeneratedString(25);
-        int createdTagNameIdFromDb;
         String  newDescription = getGeneratedString(30);
+        String updateTagDescriptionSql = "UPDATE wp_term_taxonomy SET description = '%s' WHERE term_id = '%d'";
 
-        createdTagNameIdFromDb = createTag(name, description);
+        createdTagId = createTag(name, description);
 
-        String sql = String.format("update wp_term_taxonomy set description = '%s' where term_id = '%d'",
-                newDescription, createdTagNameIdFromDb);
-        assertEquals(statement.executeUpdate(sql), 1);
+        assertEquals(statement.executeUpdate(String.format(updateTagDescriptionSql, newDescription, createdTagId)),
+                1);
 
-        ResultSet resultSet = statement.executeQuery(String.format(tagResultSetSql, createdTagNameIdFromDb));
-        while (resultSet.next()) {
-            assertEquals(resultSet.getString("description"), newDescription);
-        }
+        ResultSet createdTagResultSet = statement.executeQuery(String.format(getTagByIdSql, createdTagId));
+        createdTagResultSet.next();
+        assertEquals(createdTagResultSet.getString("description"), newDescription);
     }
 
     @Test
@@ -97,20 +94,18 @@ public class TagsTests extends BaseTest {
     public void deleteTagTest() throws SQLException {
         String name = getGeneratedString(10);
         String description = getGeneratedString(25);
-        int createdTagNameIdFromDb;
+        String deleteTagNameSql = "DELETE FROM wp_terms WHERE term_id = '%d'";
+        String deleteTagDescriptionSql = "DELETE FROM wp_term_taxonomy WHERE term_id = '%d'";
 
-        createdTagNameIdFromDb = createTag(name, description);
+        createdTagId = createTag(name, description);
 
         // delete tag name
-        String deleteTagNameSql = String.format("delete from wp_terms where term_id = '%d'", createdTagNameIdFromDb);
-        assertEquals(statement.executeUpdate(deleteTagNameSql), 1);
-        assertEquals(statement.executeUpdate(deleteTagNameSql), 0);
+        assertEquals(statement.executeUpdate(String.format(deleteTagNameSql, createdTagId)), 1);
+        assertEquals(statement.executeUpdate(String.format(deleteTagNameSql, createdTagId)), 0);
 
         // delete tag description
-        String deleteTagDescriptionSql = String.format("delete from wp_term_taxonomy where term_id = '%d'",
-                createdTagNameIdFromDb);
-        assertEquals(statement.executeUpdate(deleteTagDescriptionSql), 1);
-        assertEquals(statement.executeUpdate(deleteTagDescriptionSql), 0);
+        assertEquals(statement.executeUpdate(String.format(deleteTagDescriptionSql, createdTagId)), 1);
+        assertEquals(statement.executeUpdate(String.format(deleteTagDescriptionSql, createdTagId)), 0);
     }
 
     @Test
@@ -119,37 +114,36 @@ public class TagsTests extends BaseTest {
     public void getListTagsTest() throws SQLException {
         int numberOfPage = 3;
         int numberOfElementsPerPage = 2;
-        List<Integer> createdTagIds = new ArrayList<>();
+        List<Integer> createdTagsIds = new ArrayList<>();
+        String getListTagsWithLimitAndOffsetSql = String.format("SELECT wp_terms.term_id, wp_terms.name, tax.description " +
+                "FROM wp_terms JOIN wp_term_taxonomy tax ON wp_terms.term_id = tax.term_id " +
+                "WHERE tax.taxonomy = 'post_tag' LIMIT %d OFFSET %d",
+                numberOfElementsPerPage, (numberOfPage - 1) * numberOfElementsPerPage);
 
         for (int i = 0; i < 5; i++) {
             String name = getGeneratedString(10);
             String description = getGeneratedString(25);
-            createdTagIds.add(createTag(name, description));
+            createdTagsIds.add(createTag(name, description));
         }
 
-        String sql = String.format("select wp_terms.term_id, wp_terms.name, tax.description from wp_terms join wp_term_taxonomy tax " +
-                "on wp_terms.term_id = tax.term_id where tax.taxonomy = 'post_tag' limit %d offset %d",
-                numberOfElementsPerPage, (numberOfPage - 1) * numberOfElementsPerPage);
-
-        ResultSet resultSet = statement.executeQuery(sql);
-        while (resultSet.next()) {
-            assertEquals(resultSet.getInt("term_id"), createdTagIds.get(createdTagIds.size() - 1));
-        }
+        ResultSet lastCreatedTagResultSet = statement.executeQuery(getListTagsWithLimitAndOffsetSql);
+        lastCreatedTagResultSet.next();
+        assertEquals(lastCreatedTagResultSet.getInt("term_id"), createdTagsIds.get(createdTagsIds.size() - 1));
     }
 
     @Test
     @Story("Попытка получения тега по некорректному id")
     @Severity(SeverityLevel.MINOR)
     public void attemptToGetTagWithInvalidId() throws SQLException {
-        int invalidId = getGeneratedInt(3, 23452);
+        int invalidId = getGeneratedInt(12345, 23452);
 
-        ResultSet resultSet = statement.executeQuery(String.format(tagResultSetSql, invalidId));
+        ResultSet resultSet = statement.executeQuery(String.format(getTagByIdSql, invalidId));
         assertFalse(resultSet.next());
     }
 
     @AfterMethod
     public void cleanUp() throws SQLException {
-        statement.executeUpdate("delete from wp_terms where slug = ''");
-        statement.executeUpdate("delete from wp_term_taxonomy where taxonomy = 'post_tag'");
+        statement.executeUpdate("DELETE FROM wp_terms WHERE slug = ''");
+        statement.executeUpdate("DELETE FROM wp_term_taxonomy WHERE taxonomy = 'post_tag'");
     }
 }

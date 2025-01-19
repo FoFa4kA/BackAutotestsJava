@@ -15,110 +15,115 @@ import java.util.concurrent.TimeUnit;
 
 import static org.testng.Assert.assertEquals;
 import static wordpressapi.utils.GenerateData.getGeneratedString;
+import static wordpressapi.utils.PropertiesUtil.getProp;
 import static wordpressdb.steps.UsersSteps.createUser;
 import static wordpressdb.utils.CurrentDateTime.getCurrentDateTimeGmt;
 
 @Feature("Users Tests")
 public class UsersTests extends BaseTest {
+    private final String  getUserByIdSql = "SELECT * FROM wp_users WHERE ID = %d";
+    private int createdUserId;
 
     @Test
     @Story("Создание пользователя")
     @Severity(SeverityLevel.CRITICAL)
     public void createUserTest() throws SQLException {
-        String username = getGeneratedString(10);
+        String login = getGeneratedString(10);
         String password = getGeneratedString(20);
         String email = getGeneratedString(15);
         String currentDateTimeGmt = getCurrentDateTimeGmt();
+        String createUserSql = String.format("INSERT INTO wp_users (user_login, user_pass, user_email, user_registered) " +
+                "VALUES ('%s', '%s', '%s', '%s');", login, password, email, currentDateTimeGmt);
+        String getCreatedUserByLoginSql = String.format("SELECT * FROM wp_users WHERE user_login = '%s'", login);
 
-        String sql = String.format("insert into wp_users (user_login, user_pass, user_email, user_registered) " +
-                "values ('%s', '%s', '%s', '%s');"
-                , username, password, email, currentDateTimeGmt);
-        assertEquals(statement.executeUpdate(sql), 1);
+        // create user
+        assertEquals(statement.executeUpdate(createUserSql), 1);
 
-        ResultSet resultSet = statement.executeQuery(String.format("select * from wp_users where user_login = '%s'",
-                username));
-        while (resultSet.next()) {
-            assertEquals(resultSet.getString("user_login"), username);
-            assertEquals(resultSet.getString("user_pass"), password);
-            assertEquals(resultSet.getString("user_email"), email);
-            assertEquals(resultSet.getString("user_registered"), currentDateTimeGmt);
-        }
+        // get created user id by login
+        ResultSet postByTitleResultSet = statement.executeQuery(getCreatedUserByLoginSql);
+        postByTitleResultSet.next();
+        createdUserId = postByTitleResultSet.getInt("ID");
+
+        // check created user by id
+        ResultSet createdUserResultSet = statement.executeQuery(String.format(getUserByIdSql, createdUserId));
+        createdUserResultSet.next();
+        assertEquals(createdUserResultSet.getString("user_login"), login);
+        assertEquals(createdUserResultSet.getString("user_pass"), password);
+        assertEquals(createdUserResultSet.getString("user_email"), email);
+        assertEquals(createdUserResultSet.getString("user_registered"), currentDateTimeGmt);
     }
 
     @Test
     @Story("Получение пользователя")
     @Severity(SeverityLevel.CRITICAL)
     public void getUserTest() throws SQLException {
-        String username = getGeneratedString(10);
+        String login = getGeneratedString(10);
         String password = getGeneratedString(20);
         String email = getGeneratedString(15);
         String currentDateTimeGmt = getCurrentDateTimeGmt();
 
-        createUser(username, password, email, currentDateTimeGmt);
+        createdUserId = createUser(login, password, email, currentDateTimeGmt);
 
-        ResultSet resultSet = statement.executeQuery(String.format("select * from wp_users where user_login = '%s'",
-                username));
-        while (resultSet.next()) {
-            assertEquals(resultSet.getString("user_login"), username);
-            assertEquals(resultSet.getString("user_pass"), password);
-            assertEquals(resultSet.getString("user_email"), email);
-            assertEquals(resultSet.getString("user_registered"), currentDateTimeGmt);
-        }
+        ResultSet createdUserResultSet = statement.executeQuery(String.format(getUserByIdSql, createdUserId));
+        createdUserResultSet.next();
+        assertEquals(createdUserResultSet.getString("user_login"), login);
+        assertEquals(createdUserResultSet.getString("user_pass"), password);
+        assertEquals(createdUserResultSet.getString("user_email"), email);
+        assertEquals(createdUserResultSet.getString("user_registered"), currentDateTimeGmt);
     }
 
     @Test
     @Story("Изменение email пользователя")
     @Severity(SeverityLevel.CRITICAL)
     public void updateUserEmailTest() throws SQLException {
-        String username = getGeneratedString(10);
+        String login = getGeneratedString(10);
         String password = getGeneratedString(20);
         String email = getGeneratedString(15);
         String currentDateTimeGmt = getCurrentDateTimeGmt();
         String newEmail = getGeneratedString(13);
+        String updateEmailSql = "UPDATE wp_users SET user_email = '%s' WHERE ID = %d";
 
-        createUser(username, password, email, currentDateTimeGmt);
+        createdUserId = createUser(login, password, email, currentDateTimeGmt);
 
-        String sql = String.format("update wp_users set user_email = '%s' where user_login = '%s'",
-                newEmail, username);
-        assertEquals(statement.executeUpdate(sql), 1);
+        assertEquals(statement.executeUpdate(String.format(updateEmailSql, newEmail, createdUserId)), 1);
 
-        ResultSet resultSet = statement.executeQuery(String.format("select * from wp_users where user_login = '%s'",
-                username));
-        while (resultSet.next()) {
-            assertEquals(resultSet.getString("user_email"), newEmail);
-        }
+        ResultSet resultSet = statement.executeQuery(String.format(getUserByIdSql, createdUserId));
+        resultSet.next();
+        assertEquals(resultSet.getString("user_email"), newEmail);
     }
 
     @Test
     @Story("Удаление пользователя")
     @Severity(SeverityLevel.CRITICAL)
     public void deleteUserTest() throws SQLException {
-        String username = getGeneratedString(10);
+        String login = getGeneratedString(10);
         String password = getGeneratedString(20);
         String email = getGeneratedString(15);
         String currentDateTimeGmt = getCurrentDateTimeGmt();
+        String deleteUserSql = "DELETE FROM wp_users WHERE ID = %d";
 
-        createUser(username, password, email, currentDateTimeGmt);
+        createdUserId = createUser(login, password, email, currentDateTimeGmt);
 
-        String sql = String.format("delete from wp_users where user_login = '%s'", username);
-        assertEquals(statement.executeUpdate(sql), 1);
-        assertEquals(statement.executeUpdate(sql), 0);
+        assertEquals(statement.executeUpdate(String.format(deleteUserSql, createdUserId)), 1);
+        assertEquals(statement.executeUpdate(String.format(deleteUserSql, createdUserId)), 0);
     }
 
     @Test
     @Story("Получение списка пользователей с сортировкой по дате регистрации")
     @Severity(SeverityLevel.CRITICAL)
     public void getListUsersTest() throws SQLException {
-        List<String> createdUsernames = new ArrayList<>();
-        List<String> userNamesFromDb = new ArrayList<>();
+        List<Integer> createdUserIdsAddedByTimeOfCreation = new ArrayList<>();
+        List<Integer> userIdsSortedByRegistrationDateInDb = new ArrayList<>();
+        String getListUsersSortedByRegistrationDateSql = String.format("SELECT * FROM wp_users " +
+                "WHERE NOT user_login = '%s' ORDER BY user_registered ASC", getProp("username"));
 
         for (int i = 0; i < 4; i++) {
-            String username = getGeneratedString(10);
+            String login = getGeneratedString(10);
             String password = getGeneratedString(20);
             String email = getGeneratedString(15);
             String currentDateTimeGmt = getCurrentDateTimeGmt();
-            createUser(username, password, email, currentDateTimeGmt);
-            createdUsernames.add(username);
+            createdUserId = createUser(login, password, email, currentDateTimeGmt);
+            createdUserIdsAddedByTimeOfCreation.add(createdUserId);
             try {
                 TimeUnit.SECONDS.sleep(1);
             } catch (InterruptedException e) {
@@ -126,101 +131,98 @@ public class UsersTests extends BaseTest {
             }
         }
 
-        ResultSet resultSet = statement.executeQuery("select * from wp_users " +
-                "where not user_login = 'Vladimir.Askerov' order by user_registered asc");
+        ResultSet resultSet = statement.executeQuery(getListUsersSortedByRegistrationDateSql);
         while (resultSet.next()) {
-            userNamesFromDb.add(resultSet.getString("user_login"));
+            userIdsSortedByRegistrationDateInDb.add(resultSet.getInt("ID"));
         }
-
-        assertEquals(userNamesFromDb, createdUsernames);
+        assertEquals(userIdsSortedByRegistrationDateInDb, createdUserIdsAddedByTimeOfCreation);
     }
 
     @Test
     @Story("Получение собственного пользователя")
     @Severity(SeverityLevel.CRITICAL)
     public void getUserMeTest() throws SQLException {
-        String myUsername = getGeneratedString(10);
+        String myLogin = getGeneratedString(10);
         String myPassword = getGeneratedString(20);
         String myEmail = getGeneratedString(15);
         String currentDateTimeGmt = getCurrentDateTimeGmt();
+        String getMyUserSql = String.format("SELECT * FROM wp_users WHERE user_login = '%s' AND user_pass = '%s'",
+                myLogin, myPassword);
 
-        createUser(myUsername, myPassword, myEmail, currentDateTimeGmt);
+        createdUserId = createUser(myLogin, myPassword, myEmail, currentDateTimeGmt);
 
-        ResultSet resultSet = statement.executeQuery(String.format("select * from wp_users where user_login = '%s' " +
-                        "and user_pass = '%s'", myUsername, myPassword));
-        while (resultSet.next()) {
-            assertEquals(resultSet.getString("user_login"), myUsername);
-            assertEquals(resultSet.getString("user_pass"), myPassword);
-            assertEquals(resultSet.getString("user_email"), myEmail);
-            assertEquals(resultSet.getString("user_registered"), currentDateTimeGmt);
-        }
+        ResultSet myUserResultSet = statement.executeQuery(getMyUserSql);
+        myUserResultSet.next();
+        assertEquals(myUserResultSet.getInt("ID"), createdUserId);
+        assertEquals(myUserResultSet.getString("user_login"), myLogin);
+        assertEquals(myUserResultSet.getString("user_pass"), myPassword);
+        assertEquals(myUserResultSet.getString("user_email"), myEmail);
+        assertEquals(myUserResultSet.getString("user_registered"), currentDateTimeGmt);
     }
 
     @Test
     @Story("Изменение никнейма собственного пользователя")
     @Severity(SeverityLevel.CRITICAL)
     public void updateUserMeNicknameTest() throws SQLException {
-        String myUsername = getGeneratedString(10);
+        String myLogin = getGeneratedString(10);
         String myPassword = getGeneratedString(20);
         String myEmail = getGeneratedString(15);
         String currentDateTimeGmt = getCurrentDateTimeGmt();
-        int myUserIdFromDb = 0;
+        String createNicknameSql = "INSERT INTO wp_usermeta (user_id, meta_key, meta_value) " +
+                "VALUES (%d, 'nickname', '%s')";
         String myNewNickname = getGeneratedString(12);
+        String updateNicknameSql = "UPDATE wp_usermeta SET meta_value = '%s' WHERE user_id = %d " +
+                "AND meta_key = 'nickname'";
         String myUserUpdatedNicknameFromDb = "";
+        String getUserNickname = "SELECT * FROM wp_usermeta WHERE user_id = %d AND meta_key = 'nickname'";
 
-        // create user with default nickname identical to username (user_login)
-        createUser(myUsername, myPassword, myEmail, currentDateTimeGmt);
-        ResultSet userResultSet = statement.executeQuery(String.format("select * from wp_users where user_login = '%s' " +
-                "and user_pass = '%s'", myUsername, myPassword));
-        while (userResultSet.next()) {
-            myUserIdFromDb = userResultSet.getInt("ID");
-        }
-        String createNickname = String.format("insert into wp_usermeta (user_id, meta_key, meta_value) " +
-                        "values (%d, 'nickname', '%s');", myUserIdFromDb, myUsername);
+        // create user with default nickname identical to login
+        createdUserId = createUser(myLogin, myPassword, myEmail, currentDateTimeGmt);
+        String createNickname = String.format(createNicknameSql, createdUserId, myLogin);
         statement.executeUpdate(createNickname);
 
         // update nickname
-        String updateNickname = String.format("update wp_usermeta set meta_value = '%s' where user_id = %d " +
-                "and meta_key = 'nickname'", myNewNickname, myUserIdFromDb);
-        assertEquals(statement.executeUpdate(updateNickname), 1);
+        assertEquals(statement.executeUpdate(String.format(updateNicknameSql, myNewNickname, createdUserId)), 1);
 
         // check updated nickname
-        ResultSet userMetaResultSet = statement.executeQuery(String.format("select * from wp_usermeta " +
-                "where user_id = %d and meta_key = 'nickname'", myUserIdFromDb));
-        while (userMetaResultSet.next()) {
-            myUserUpdatedNicknameFromDb = userMetaResultSet.getString("meta_value");
-        }
+        ResultSet userNicknameResultSet = statement.executeQuery(String.format(getUserNickname, createdUserId));
+        userNicknameResultSet.next();
+        myUserUpdatedNicknameFromDb = userNicknameResultSet.getString("meta_value");
         assertEquals(myUserUpdatedNicknameFromDb, myNewNickname);
     }
 
     @Test
-    @Story("Попытка создания пользователя с уже занятым никнеймом")
+    @Story("Попытка создания пользователя с уже занятым логином")
     @Severity(SeverityLevel.CRITICAL)
     public void attemptToCreateUserWithExistingUsernameTest() throws SQLException {
-        String username = getGeneratedString(10);
+        String login = getGeneratedString(10);
         String password = getGeneratedString(20);
         String email = getGeneratedString(15);
         String currentDateTimeGmt = getCurrentDateTimeGmt();
-        createUser(username, password, email, currentDateTimeGmt);
-        List<String> createdUsersFromDb = new ArrayList<>();
+        List<String> createdUsersLogins = new ArrayList<>();
+        String createUserWithSameLoginSql = String.format("INSERT INTO " +
+                        "wp_users (user_login, user_pass, user_email, user_registered) VALUES ('%s', '%s', '%s', '%s');",
+                login, getGeneratedString(18), getGeneratedString(12), getCurrentDateTimeGmt());
+        String getUserByLoginSql = String.format("SELECT * FROM wp_users WHERE user_login = '%s'", login);
 
-        String createUserWithSameUsername = String.format("insert into " +
-                        "wp_users (user_login, user_pass, user_email, user_registered) values ('%s', '%s', '%s', '%s');",
-                username, getGeneratedString(18), getGeneratedString(12), getCurrentDateTimeGmt());
-        statement.executeUpdate(createUserWithSameUsername);
+        // create first user
+        createUser(login, password, email, currentDateTimeGmt);
 
-        ResultSet resultSet =  statement.executeQuery(String.format("select * from wp_users where user_login = '%s'",
-                username));
-        while (resultSet.next()) {
-            createdUsersFromDb.add(resultSet.getString("user_login"));
+        // create second user with the same login as the first user
+        statement.executeUpdate(createUserWithSameLoginSql);
+
+        // check number of users with the same login
+        ResultSet userByLoginResultSet =  statement.executeQuery(getUserByLoginSql);
+        while (userByLoginResultSet.next()) {
+            assertEquals(userByLoginResultSet.getString("user_login"), login);
+            createdUsersLogins.add(userByLoginResultSet.getString("user_login"));
         }
-
-        assertEquals(createdUsersFromDb.size(), 2);
+        assertEquals(createdUsersLogins.size(), 2);
     }
 
     @AfterMethod
     public void cleanUp() throws SQLException {
-        statement.execute("delete from wp_users where not user_login = 'Vladimir.Askerov'");
-        statement.execute("delete from wp_usermeta where not user_id = 1");
+        statement.execute(String.format("DELETE FROM wp_users WHERE NOT user_login = '%s'", getProp("username")));
+        statement.execute("DELETE FROM wp_usermeta WHERE NOT user_id = 1");
     }
 }
