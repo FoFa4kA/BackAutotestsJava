@@ -196,20 +196,20 @@ public class UsersTests extends BaseTest {
     @Severity(SeverityLevel.CRITICAL)
     public void attemptToCreateUserWithExistingUsernameTest() throws SQLException {
         String login = getGeneratedString(10);
-        String password = getGeneratedString(20);
-        String email = getGeneratedString(15);
-        String currentDateTimeGmt = getCurrentDateTimeGmt();
+        String password_1 = getGeneratedString(20);
+        String email_1 = getGeneratedString(15);
+        String currentDateTimeGmt_1 = getCurrentDateTimeGmt();
+        String password_2 = getGeneratedString(18);
+        String email_2 = getGeneratedString(12);
+        String currentDateTimeGmt_2 = getCurrentDateTimeGmt();
         List<String> createdUsersLogins = new ArrayList<>();
-        String createUserWithSameLoginSql = String.format("INSERT INTO " +
-                        "wp_users (user_login, user_pass, user_email, user_registered) VALUES ('%s', '%s', '%s', '%s');",
-                login, getGeneratedString(18), getGeneratedString(12), getCurrentDateTimeGmt());
         String getUserByLoginSql = String.format("SELECT * FROM wp_users WHERE user_login = '%s'", login);
 
         // create first user
-        createUser(login, password, email, currentDateTimeGmt);
+        createUser(login, password_1, email_1, currentDateTimeGmt_1);
 
         // create second user with the same login as the first user
-        statement.executeUpdate(createUserWithSameLoginSql);
+        createUser(login, password_2, email_2, currentDateTimeGmt_2);
 
         // check number of users with the same login
         ResultSet userByLoginResultSet =  statement.executeQuery(getUserByLoginSql);
