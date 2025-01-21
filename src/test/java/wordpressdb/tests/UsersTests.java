@@ -150,7 +150,7 @@ public class UsersTests {
         myUpdatedNicknameResultSet.next();
         assertEquals(myUpdatedNicknameResultSet.getString("meta_value"), myNewNickname);
     }
-//
+
     @Test
     @Story("Попытка создания пользователя с уже занятым логином")
     @Severity(SeverityLevel.CRITICAL)
