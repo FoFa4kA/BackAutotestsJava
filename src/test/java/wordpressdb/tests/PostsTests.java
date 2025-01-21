@@ -1,5 +1,6 @@
 package wordpressdb.tests;
 
+import io.qameta.allure.Epic;
 import io.qameta.allure.Feature;
 import io.qameta.allure.Severity;
 import io.qameta.allure.SeverityLevel;
@@ -15,14 +16,19 @@ import java.util.List;
 import static org.testng.Assert.assertEquals;
 import static wordpressapi.utils.GenerateData.getGeneratedInt;
 import static wordpressapi.utils.GenerateData.getGeneratedString;
+import static wordpressdb.steps.PostsSteps.cleanPosts;
 import static wordpressdb.steps.PostsSteps.createPost;
+import static wordpressdb.steps.PostsSteps.deletePostById;
+import static wordpressdb.steps.PostsSteps.deletePostByTitle;
+import static wordpressdb.steps.PostsSteps.getPostsCount;
+import static wordpressdb.steps.PostsSteps.getPostsByTittle;
+import static wordpressdb.steps.PostsSteps.updatePostTitle;
 import static wordpressdb.utils.CurrentDateTime.getCurrentDateTime;
 import static wordpressdb.utils.CurrentDateTime.getCurrentDateTimeGmt;
 
+@Epic("DB Tests")
 @Feature("Posts Tests")
-public class PostsTests extends BaseTest {
-    private final String getPostByIdSql = "SELECT * FROM wp_posts WHERE ID = %d";
-    private int createdPostId;
+public class PostsTests {
 
     @Test
     @Story("Создание поста с заголовком и содержанием")
@@ -32,28 +38,10 @@ public class PostsTests extends BaseTest {
         String content = getGeneratedString(25);
         String currentDateTime = getCurrentDateTime();
         String currentDateTimeGmt = getCurrentDateTimeGmt();
-        String createPostSql = String.format("INSERT INTO wp_posts " +
-                        "(post_title, post_content, post_date, post_date_gmt, post_modified, post_modified_gmt, " +
-                        "post_excerpt, post_status, to_ping, pinged, post_content_filtered) " +
-                        "VALUES ('%s', '%s', '%s', '%s', '%s', '%s', '', 'draft', '', '', '');",
-                title, content, currentDateTime, currentDateTimeGmt, currentDateTime, currentDateTimeGmt);
-        String getCreatedPostByTitleSql = String.format("SELECT * FROM wp_posts WHERE post_title = '%s'", title);
+        int postsCountBeforeCreatingPost = getPostsCount();
 
-        // create post
-        assertEquals(statement.executeUpdate(createPostSql), 1);
-
-        // get created post id by title
-        ResultSet postByTitleResultSet = statement.executeQuery(getCreatedPostByTitleSql);
-        postByTitleResultSet.next();
-        createdPostId = postByTitleResultSet.getInt("ID");
-
-        // check created post by id
-        ResultSet createdPostResultSet = statement.executeQuery(String.format(getPostByIdSql, createdPostId));
-        createdPostResultSet.next();
-        assertEquals(createdPostResultSet.getString("post_title"), title);
-        assertEquals(createdPostResultSet.getString("post_content"), content);
-        assertEquals(createdPostResultSet.getString("post_date"), currentDateTime);
-        assertEquals(createdPostResultSet.getString("post_date_gmt"), currentDateTimeGmt);
+        createPost(title, content, currentDateTime, currentDateTimeGmt);
+        assertEquals(getPostsCount(), postsCountBeforeCreatingPost + 1);
     }
 
     @Test
@@ -65,9 +53,9 @@ public class PostsTests extends BaseTest {
         String currentDateTime = getCurrentDateTime();
         String currentDateTimeGmt = getCurrentDateTimeGmt();
 
-        createdPostId = createPost(title, content, currentDateTime, currentDateTimeGmt);
+        createPost(title, content, currentDateTime, currentDateTimeGmt);
 
-        ResultSet createdPostResultSet = statement.executeQuery(String.format(getPostByIdSql, createdPostId));
+        ResultSet createdPostResultSet = getPostsByTittle(title);
         createdPostResultSet.next();
         assertEquals(createdPostResultSet.getString("post_title"), title);
         assertEquals(createdPostResultSet.getString("post_content"), content);
@@ -84,15 +72,14 @@ public class PostsTests extends BaseTest {
         String currentDateTime = getCurrentDateTime();
         String currentDateTimeGmt = getCurrentDateTimeGmt();
         String newTitle = getGeneratedString(14);
-        String updateTitleSql = "UPDATE wp_posts SET post_title = '%s' WHERE ID = %d";
 
-        createdPostId = createPost(title, content, currentDateTime, currentDateTimeGmt);
+        createPost(title, content, currentDateTime, currentDateTimeGmt);
+        updatePostTitle(title, newTitle);
 
-        assertEquals(statement.executeUpdate(String.format(updateTitleSql, newTitle, createdPostId)), 1);
-
-        ResultSet createdPostResultSet = statement.executeQuery(String.format(getPostByIdSql, createdPostId));
-        createdPostResultSet.next();
-        assertEquals(createdPostResultSet.getString("post_title"), newTitle);
+        ResultSet updatedPostResultSet = getPostsByTittle(newTitle);
+        updatedPostResultSet.next();
+        assertEquals(updatedPostResultSet.getString("post_title"), newTitle);
+        assertEquals(updatedPostResultSet.getString("post_content"), content);
     }
 
     @Test
@@ -103,12 +90,13 @@ public class PostsTests extends BaseTest {
         String content = getGeneratedString(25);
         String currentDateTime = getCurrentDateTime();
         String currentDateTimeGmt = getCurrentDateTimeGmt();
-        String deletePostSql = "DELETE FROM wp_posts WHERE ID = %d";
+        int postsCountBeforeDeletingPost;
 
-        createdPostId = createPost(title, content, currentDateTime, currentDateTimeGmt);
+        createPost(title, content, currentDateTime, currentDateTimeGmt);
+        postsCountBeforeDeletingPost = getPostsCount();
+        deletePostByTitle(title);
 
-        assertEquals(statement.executeUpdate(String.format(deletePostSql, createdPostId)), 1);
-        assertEquals(statement.executeUpdate(String.format(deletePostSql, createdPostId)), 0);
+        assertEquals(getPostsCount(), postsCountBeforeDeletingPost - 1);
     }
 
     @Test
@@ -120,7 +108,6 @@ public class PostsTests extends BaseTest {
         String content;
         String currentDateTime;
         String currentDateTimeGmt;
-        String findPostsByTitleSql = "SELECT * FROM wp_posts WHERE post_title = '%s'";
         List<String> foundPosts = new ArrayList<>();
 
         for (int i = 0; i < 4; i++) {
@@ -139,7 +126,7 @@ public class PostsTests extends BaseTest {
             createPost(title, content, currentDateTime, currentDateTimeGmt);
         }
 
-        ResultSet foundPostsresultSet = statement.executeQuery(String.format(findPostsByTitleSql, searchTitle));
+        ResultSet foundPostsresultSet = getPostsByTittle(searchTitle);
         while (foundPostsresultSet.next()) {
             assertEquals(foundPostsresultSet.getString("post_title"), searchTitle);
             foundPosts.add(foundPostsresultSet.getString("post_title"));
@@ -152,13 +139,14 @@ public class PostsTests extends BaseTest {
     @Severity(SeverityLevel.NORMAL)
     public void attemptToDeletePostWithInvalidId() throws SQLException {
         int invalidId = getGeneratedInt(1234, 32341);
-        String sql = String.format("DELETE FROM wp_posts WHERE ID = %d", invalidId);
+        int postsCountBeforeDeletingPost = getPostsCount();
 
-        assertEquals(statement.executeUpdate(sql), 0);
+        deletePostById(invalidId);
+        assertEquals(getPostsCount(), postsCountBeforeDeletingPost);
     }
 
     @AfterMethod
     public void cleanUp() throws SQLException {
-        statement.execute("DELETE FROM wp_posts WHERE post_status = 'draft'");
+        cleanPosts();
     }
 }
